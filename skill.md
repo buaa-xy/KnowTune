@@ -14,7 +14,9 @@ Claude should trigger the following actions using command line calls to `starttu
 1. **Collect static metrics**
 ```bash
 python scripts/starttune.py collect_static_metrics --server <server_ip>
+```
 
 2. **Collect runtime metrics**
 ```bash
 python scripts/starttune.py collect_runtime_metrics --server <server_ip> [--pressure]
+```
