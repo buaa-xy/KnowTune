@@ -6,6 +6,7 @@ description: Execute step-by-step system performance tuning tasks using starttun
 # System Tuning Skill
 
 This skill allows Claude to perform automated system and application tuning by calling individual functions in `starttune.py` step by step.
+**Keywords**: system tuning, performance optimization, parameter optimization, metrics collection, runtime metrics, static metrics, micro-dependency analysis, pressure testing, bottleneck analysis, MySQL tuning, server optimization, strategy recommendations
 
 ## Instructions
 
