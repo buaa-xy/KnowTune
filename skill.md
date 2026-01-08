@@ -40,3 +40,24 @@ python scripts/starttune.py optimize_params --server <server_ip> [--iterations N
 ```bash
 python scripts/starttune.py strategy_optimization --server <server_ip>
 ```
+
+## Notes
+
+- `<server_ip>` should match the target server configured in `config`.
+- Optional arguments:
+  - `--pressure` enables pressure test during runtime metrics collection.
+  - `--iterations` specifies iterations for micro-dependency collection or parameter optimization.
+
+## Example
+
+**Input:**  
+"Optimize MySQL performance on server 192.168.1.10 using full system tuning workflow."
+
+**Output:**  
+- Static system metrics collected  
+- Runtime metrics collected with optional pressure test  
+- Micro-dependency analysis (if enabled)  
+- Performance bottleneck analysis completed  
+- Parameter optimization executed and best config saved  
+- Optional strategy optimization recommendations
+
