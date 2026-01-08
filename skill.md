@@ -20,3 +20,23 @@ python scripts/starttune.py collect_static_metrics --server <server_ip>
 ```bash
 python scripts/starttune.py collect_runtime_metrics --server <server_ip> [--pressure]
 ```
+
+3. **Collect micro-dependencies (optional)**
+```bash
+python scripts/starttune.py collect_micro_dependencies --server <server_ip> [--iterations N]
+```
+
+4. **Analyze performance**
+```bash
+python scripts/starttune.py analyze_performance --server <server_ip>
+```
+
+5. **Optimize parameters**
+```bash
+python scripts/starttune.py optimize_params --server <server_ip> [--iterations N]
+```
+
+6. **Run strategy optimization (optional)**
+```bash
+python scripts/starttune.py strategy_optimization --server <server_ip>
+```
