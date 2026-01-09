@@ -41,8 +41,7 @@ source venv/bin/activate
     - `host_user` → user-provided username
     - `password` → user-provided password
   - Ensure that YAML structure and indentation are preserved when making changes.
-
-4. **Run the tuning process**
+ 
 4. **Run the full system tuning script**
 - Agent should execute the main tuning script:
 ```bash
@@ -53,3 +52,29 @@ python src/start_tune.py
   - Bottleneck analysis
   - Parameter optimization
   - Optional strategy recommendations
+ 
+5. **Read tuning log and summarize results**
+- After the tuning process finishes, a directory named `tuning.log` will be generated under the current working directory.
+- Claude should read the contents of `tuning.log` (including key logs, final configuration, and performance results).
+- Based on the log contents, Agent should:
+  - Summarize the tuning process
+  - Explain identified bottlenecks and corresponding optimization actions
+  - Highlight performance improvements (e.g., QPS, latency, resource utilization)
+  - Provide a concise tuning conclusion
+
+## Example
+
+**Input:**  
+Optimize MySQL performance on server `192.168.1.10` using the full automatic tuning workflow.  
+SSH connection information (IP, user, password) is provided by the user.
+
+**Output:**  
+
+- Full system tuning process executed via `start_tune.py`
+- Metrics collection, bottleneck analysis, and parameter optimization completed automatically
+- A `tuning_log` directory generated after execution
+- Final tuning summary produced based on `tuning_log`, including:
+  - Identified performance bottlenecks
+  - Key optimized parameters
+  - Observed performance improvements
+  - Overall tuning conclusions and recommendations
