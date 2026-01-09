@@ -19,3 +19,25 @@ Claude should trigger the following actions using command line calls:
 ```bash
 cd ./A-Tune
 ```
+
+2. **Activate the virtual environment**
+```bash
+source venv/bin/activate
+```
+
+3. **Update target server information**
+- Claude should read the user input containing server connection details:
+  - `ip`
+  - `user`
+  - `password`
+- **Validation:**  
+  - If any of these values are missing, the skill **must stop** and indicate which information is missing, asking the user to provide it.  
+  - Example message:  
+    > "Missing server IP. Please provide the target server's IP, username, and password before proceeding."
+- **Update `.env.yaml`**  
+  - If all values are provided, Claude should update the `servers[0]` entry in `config/.env.yaml` accordingly.  
+  - Fields to update:
+    - `ip` → user-provided server IP
+    - `host_user` → user-provided username
+    - `password` → user-provided password
+  - Ensure that YAML structure and indentation are preserved when making changes.
