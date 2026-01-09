@@ -45,7 +45,8 @@ source venv/bin/activate
 4. **Run the full system tuning script**
 - Agent should execute the main tuning script:
 ```bash
-python src/start_tune.py
+export PYTHONPATH="`pwd`:$PYTHONPATH"
+python3 src/start_tune.py
 ```
 - Note: This single command will automatically perform all tuning steps, including:
   - Metric collection
