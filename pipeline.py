@@ -10,12 +10,21 @@ from initialization import recommend_params
 # ============================
 if __name__ == "__main__":
 
-    # ---------------- Example Performance Report ----------------
-    perf_report = """
-The MySQL system is experiencing high disk I/O utilization and frequent lock waits under sysbench OLTP workload. 
-Observed latency spikes in transaction commits and occasional deadlocks under concurrent sessions. 
-Memory buffer pool is underutilized, while network utilization is moderate.
-"""
+#     # ---------------- Example Performance Report ----------------
+#     perf_report = """
+# The MySQL system is experiencing high disk I/O utilization and frequent lock waits under sysbench OLTP workload. 
+# Observed latency spikes in transaction commits and occasional deadlocks under concurrent sessions. 
+# Memory buffer pool is underutilized, while network utilization is moderate.
+# """
+    # ---------------- Load Performance Report from JSON ----------------
+    perf_report_file = "performance_report.json"  # JSON file
+    with open(perf_report_file, "r", encoding="utf-8") as f:
+        perf_json = json.load(f)
+    
+    perf_report = perf_json.get("report", "")
+    if not perf_report:
+        raise ValueError(f"No 'report' field found in {perf_report_file}")
+    print("Performance report loaded from JSON file.")
 
     # ---------------- Path to JSONL knowledge DB ----------------
     data_path = "mysql"  # JSONL files: 0*.jsonl, 1*.jsonl, etc.
