@@ -31,7 +31,7 @@ embedding_client = OpenAI(
 # ============================
 # Neo4j Knowledge Graph
 # ============================
-graph = Graph("bolt://localhost:7687", auth=("neo4j", "12345678"))
+graph = Graph("bolt://localhost:7687", auth=("neo4j", ""))
 
 # ============================
 # Utility Functions
