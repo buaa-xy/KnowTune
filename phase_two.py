@@ -250,7 +250,7 @@ def load_history_to_smac(history_file: str, cs: ConfigurationSpace, smac_instanc
     # Get weights, default to 1.0 if missing
     weights = [entry.get("weight", 1.0) for entry in history]
     total_weight = sum(weights)
-
+    
     # Compute proportional number of additions for each entry
     # Scale so that total additions ≈ topk
     n_additions = [max(1, int(round(w / total_weight * topk))) for w in weights]
