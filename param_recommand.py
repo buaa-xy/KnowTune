@@ -1,5 +1,4 @@
 import os
-import glob
 import json
 import pickle
 from tqdm import tqdm
@@ -20,7 +19,7 @@ embedding_client = OpenAI(api_key="", base_url="", http_client=httpx.Client(veri
 # ---------------- Neo4j ----------------
 graph = Graph("bolt://localhost:7687", auth=("neo4j", "12345678"))
 
-# ---------------- Utility ----------------
+# ---------------- Utility Functions ----------------
 def generate_embeddings(text, model="text-embedding-ada-002"):
     response = embedding_client.embeddings.create(input=text, model=model)
     return response.data[0].embedding
@@ -82,20 +81,69 @@ def get_related_parameter_names(param_name):
     result = graph.run(query, name=param_name).data()
     return result[0]["related_names"] if result else []
 
+def get_messages(role_prompt: str, history: str, usr_prompt: str):
+    messages = []
+    if role_prompt: messages.append({"role": "system", "content": role_prompt})
+    if history: messages.append({"role": "assistant", "content": history})
+    if usr_prompt: messages.append({"role": "user", "content": usr_prompt})
+    return messages
+
+# ---------------- LLM Single Parameter Recommendation ----------------
+def generate_answer(query, static_profile, retrieved_faiss, retrieved_bm25):
+    unique_names = set()
+    combined = []
+    for param in retrieved_faiss + retrieved_bm25:
+        if param["name"] not in unique_names:
+            param["related_params"] = get_related_parameter_names(param["name"])
+            combined.append(param)
+            unique_names.add(param["name"])
+
+    context = "\n".join([
+        f"{p['name']} | Related: {', '.join(p['related_params'])}" if p['related_params'] else p['name']
+        for p in combined
+    ])
+
+    role_prompt = "You are a senior OS tuning expert with extensive parameter optimization experience."
+    prompt = f"""
+Assume you are an experienced MySQL database tuning expert.
+Task:
+1. Select up to 10 most important parameters.
+2. Provide tuning ranges.
+Candidate parameters:
+{context}
+System bottleneck: {query}
+Database: MySQL 8.0.40
+Environment: {static_profile}
+Return strictly as JSON:
+{{"parameter_name": {{"range": [...]}}}}
+"""
+    messages = get_messages(role_prompt, "", prompt)
+    chat_completion = client.chat.completions.create(
+        messages=messages,
+        model="gpt-4o-mini",
+        temperature=0.1
+    )
+    ans = chat_completion.choices[0].message.content
+    match = re.search(r'\{.*\}', ans, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return ans
+    return ans
+
 def split_performance_report_to_queries(report_text: str):
     role_prompt = "You are an OS performance expert. Extract key bottleneck sentences per subsystem."
-    user_prompt = f"""Extract up to 8 short query sentences from the performance report representing system bottlenecks:
-    {report_text}"""
-    messages = [{"role":"system","content":role_prompt},{"role":"user","content":user_prompt}]
+    user_prompt = f"Extract up to 8 short query sentences from the performance report representing system bottlenecks:\n{report_text}"
+    messages = get_messages(role_prompt, "", user_prompt)
     resp = client.chat.completions.create(messages=messages, model="deepseek-chat", temperature=0.1)
     content = resp.choices[0].message.content.strip()
-    queries = [q.strip() for q in content.strip("[]").split(",") if q.strip()]
-    return queries
+    return [q.strip() for q in content.strip("[]").split(",") if q.strip()]
 
 def generate_bm25_keywords(report_text: str, max_keywords=5):
     role_prompt = "You are a performance tuning expert. Extract critical keywords."
     user_prompt = f"Extract up to {max_keywords} keywords from the report:\n{report_text}"
-    messages = [{"role":"system","content":role_prompt},{"role":"user","content":user_prompt}]
+    messages = get_messages(role_prompt, "", user_prompt)
     resp = client.chat.completions.create(messages=messages, model="deepseek-chat", temperature=0.0)
     content = resp.choices[0].message.content.strip()
     return [kw.strip() for kw in content.strip("[]").split(",") if kw.strip()]
