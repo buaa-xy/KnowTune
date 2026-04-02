@@ -11,7 +11,7 @@ from src.analyzer.network_analyzer import NetworkAnalyzer
 from src.analyzer.base_analyzer import BaseAnalyzer
 from typing import Tuple
 
-class PerformanceAnalyzer(BaseAnalyzer):
+class Analyzer(BaseAnalyzer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cpu_analyzer = CpuAnalyzer(data=self.data.get("Cpu", {}))
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     }
 }
     
-    analyzer = PerformanceAnalyzer(
+    analyzer = Analyzer(
         data=data
     )
     print(analyzer.run())

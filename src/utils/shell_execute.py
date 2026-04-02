@@ -1,19 +1,16 @@
 import paramiko
-import time
 from typing import Dict, Any, Callable
 import logging
 from functools import wraps, partial
-import inspect
 from collections import defaultdict
 from abc import abstractmethod
-import traceback
 from types import ModuleType
 
 decorated_funcs = defaultdict(list)
 cmds_registry = defaultdict(list)
 
 
-# 配置日志
+# Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -26,19 +23,20 @@ def remote_execute(
     host_user: str = "root",
     host_password: str = "",
 ) -> Dict[str, Any]:
-    # 创建SSH对象
+    # Create SSH client instance
     client = paramiko.SSHClient()
-    # 允许连接不在known_hosts文件中的主机
+    # Allow connecting to hosts not in known_hosts
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        # 连接到远程主机
+        # Connect to the remote host
         client.connect(host_ip, host_port, host_user, host_password)
-        # 执行指令
+        # Execute the command
         stdin, stdout, stderr = client.exec_command(cmd)
-        # 获取执行结果
+        # Get command execution result
         result = stdout.read().decode()
         error = stderr.read().decode()
         status_code = stdout.channel.recv_exit_status()
+        
         if status_code:
             logging.error("Error executing command '%s': %s", cmd, error)
             return {cmd: result}
@@ -49,4 +47,5 @@ def remote_execute(
         logging.error("Exception occurred while executing command '%s': %s", cmd, e)
         return None
     finally:
+        # Close the SSH connection
         client.close()

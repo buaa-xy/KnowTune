@@ -86,46 +86,6 @@ def perf_syscall_parse(
     res = {"系统单位时间调用次数": sys_call_rate}
     return res
 
-# def mpstat_parse(
-#     cmd: str,
-#     stdout: Any,
-# ) -> Dict:
-#     if cmd != "mpstat -P ALL -o JSON 1 1":
-#         logging.error("Command is not 'mpstat'.")
-#         raise ValueError("Command must be 'mpstat'")
-
-#     if not isinstance(stdout, str):
-#         logging.error("Input stdout is not a string.")
-#         raise TypeError("Expected stdout to be a string")
-
-#     try:
-#         stdout_data = json.loads(stdout)
-#         data = stdout_data["sysstat"]["hosts"][0]["statistics"][0]["cpu-load"][0]
-
-#         usr, nice, sys, iowait, irq, soft, steal, guest, gnice, idle = map(float, (data["usr"], data["nice"], data["sys"], data["iowait"], data["irq"], data["soft"], data["steal"], data["guest"], data["gnice"], data["idle"]))
-
-#         res = {
-#             "用户态中的cpu利用率": usr,
-#             "具有nice优先级的用户态CPU使用率": nice,
-#             "kernel内核态执行时的CPU利用率": sys,
-#             "系统有未完成的磁盘I/O请求时，等待IO占用CPU的百分比": iowait,
-#             "硬中断占用CPU时间的百分比": irq,
-#             "软中断占用CPU时间的百分比": soft,
-#             "虚拟化环境中，其他虚拟机占用的CPU时间百分比": steal,
-#             "运行虚拟处理器时CPU花费时间的百分比": guest,
-#             "运行带有nice优先级的虚拟CPU所花费的时间百分比": gnice,
-#             "CPU处在空闲状态的时间百分比": idle
-#         }
-#     except json.JSONDecodeError as e:
-#         logging.error(f"Failed to parse JSON from stdout: {e}")
-#         raise ValueError("Failed to parse JSON from stdout") from e
-#     except (IndexError, ValueError, TypeError) as e:
-#         logging.error(f"Failed to parse mpstat CPU statistics: {e}")
-#         raise ValueError("Failed to parse mpstat CPU statistics") from e
-
-#     return res
-
-
 
 def mpstat_parse(
     cmd: str,

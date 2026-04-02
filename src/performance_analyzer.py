@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 from src.collector.micro_dep_collector import MicroDepCollector, COLLECTMODE
-from src.analyzer.performance_analyzer import PerformanceAnalyzer
+from src.analyzer.all_analyzer import Analyzer
 from src.collector.metric_collector import MetricCollector
 from src.collector.static_collector import collect_system_profile
 from src.utils.shell_execute import SshClient
@@ -124,7 +124,7 @@ class PerformanceAnalyzer:
         Analyze performance metrics and identify bottlenecks.
         """
         logging.info("[Main] analyzing performance ...")
-        analyzer = PerformanceAnalyzer(data=data, app=app)
+        analyzer = Analyzer(data=data, app=app)
         return analyzer.run()
 
     # -----------------------------------------------------------
