@@ -1,45 +1,60 @@
 import json
 from openai import OpenAI
 import httpx
-from retrieval_and_generation import get_messages
 import re
 
-# ---------------- OpenAI client ----------------
-client = OpenAI(
-    api_key="",
-    base_url="",
-    http_client=httpx.Client(verify=False)
-)
 
-# ---------------- Multi-Perspective Parameter Recommendation ----------------
-def recommend_params(parameter_knowledge, parameter_ranges, performance_report, environment):
+class ParameterInitializer:
     """
-    Generate multiple candidate parameter configurations from different optimization perspectives.
-
-    Args:
-        parameter_knowledge (dict or str): Existing knowledge of system parameters, including dependencies, categories, historical ranges, and criticality
-        parameter_ranges (dict): Recommended parameter ranges for each parameter
-        performance_report (str): Current system performance report or bottleneck description
-        environment (str): System environment information, including CPU, memory, storage, OS, MySQL version, etc.
-
-    Returns:
-        dict: Multi-perspective candidate configurations and weights
-        Example:
-        {
-            "HighThroughput": {"params": {"param1": value1, "param2": value2}, "weight": 1.0},
-            "LowLatency": {"params": {"param1": value3, "param2": value4}, "weight": 1.0},
-            ...
-        }
+    Class for multi-perspective MySQL parameter initialization and recommendation.
+    Generates candidate parameter configurations from HighThroughput, LowLatency, HighConcurrency,
+    CacheMemoryEfficiency, NetworkAdaptability, GlobalBalanced perspectives.
     """
 
-    role_prompt = (
-        "You are a senior operating system and database tuning expert, with extensive experience in MySQL "
-        "and Linux system performance optimization. You are highly skilled in generating multiple candidate "
-        "parameter configurations based on different optimization perspectives, considering parameter dependencies, "
-        "system environment, workload characteristics, and historical tuning knowledge."
-    )
+    def __init__(self, api_key: str = "", base_url: str = ""):
+        """
+        Initialize OpenAI client for LLM-based parameter recommendation.
+        """
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=httpx.Client(verify=False)
+        )
 
-    prompt = f"""
+    def get_messages(self, role_prompt: str, history: str, usr_prompt: str) -> list:
+        """
+        Construct chat messages for LLM input
+        """
+        messages = []
+        if role_prompt != "":
+            messages.append({"role": "system", "content": role_prompt})
+        if len(history) > 0:
+            messages.append({"role": "assistant", "content": history})
+        if usr_prompt != "":
+            messages.append({"role": "user", "content": usr_prompt})
+        return messages
+
+    def recommend_params(self, parameter_knowledge, parameter_ranges, performance_report, environment):
+        """
+        Generate multiple candidate parameter configurations from different optimization perspectives.
+
+        Args:
+            parameter_knowledge (dict or str): Existing knowledge of system parameters, including dependencies, categories, historical ranges, and criticality
+            parameter_ranges (dict): Recommended parameter ranges for each parameter
+            performance_report (str): Current system performance report or bottleneck description
+            environment (str): System environment information, including CPU, memory, storage, OS, MySQL version, etc.
+
+        Returns:
+            dict: Multi-perspective candidate configurations and weights
+        """
+        role_prompt = (
+            "You are a senior operating system and database tuning expert, with extensive experience in MySQL "
+            "and Linux system performance optimization. You are highly skilled in generating multiple candidate "
+            "parameter configurations based on different optimization perspectives, considering parameter dependencies, "
+            "system environment, workload characteristics, and historical tuning knowledge."
+        )
+
+        prompt = f"""
 Task: Generate multiple candidate parameter configurations for a MySQL system from multiple optimization perspectives.
 
 Input:
@@ -151,20 +166,20 @@ Output JSON format example:
 Please strictly follow the JSON format and do not include any text outside the JSON.
 """
 
-    messages = get_messages(role_prompt, history="", usr_prompt=prompt)
+        messages = self.get_messages(role_prompt, history="", usr_prompt=prompt)
 
-    chat_completion = client.chat.completions.create(
-        messages=messages,
-        model="gpt-4o-mini",
-        temperature=0.1
-    )
+        chat_completion = self.client.chat.completions.create(
+            messages=messages,
+            model="gpt-4o-mini",
+            temperature=0.1
+        )
 
-    ans = chat_completion.choices[0].message.content
+        ans = chat_completion.choices[0].message.content
 
-    match = re.search(r'\{.*\}', ans, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return ans
-    return ans
+        match = re.search(r'\{.*\}', ans, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                return ans
+        return ans
