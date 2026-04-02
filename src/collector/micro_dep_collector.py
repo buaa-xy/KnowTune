@@ -11,7 +11,6 @@ class COLLECTMODE:
 
 
 class BaseCollector(ABC):
-    """性能数据收集器基类"""
 
     def __init__(self):
         self.raw_data: Dict[str, float] = {}
@@ -20,17 +19,14 @@ class BaseCollector(ABC):
 
     @abstractmethod
     def collect(self):
-        """收集性能数据"""
         pass
 
     @abstractmethod
     def process(self):
-        """处理原始数据"""
         pass
 
     @staticmethod
     def is_number(s: str) -> bool:
-        """检查字符串是否为数字"""
         try:
             float(s)
             return True
@@ -39,9 +35,8 @@ class BaseCollector(ABC):
 
 
 class PerfCollector(BaseCollector):
-    """基于perf的性能数据收集器"""
 
-    # 性能事件配置
+    # Performance event configurations
     PMU_CONFIGS = {
         "topdown": {
             'r0011': "cycle",
@@ -97,7 +92,7 @@ class PerfCollector(BaseCollector):
         }
     }
 
-    # 微架构配置
+    # Microarchitecture configuration
     FW_CONFIG = {'dispatch_size': 4}
 
     def __init__(
@@ -120,28 +115,28 @@ class PerfCollector(BaseCollector):
             duration: float = 0.1,
             target_pid: int = 0
     ):
-        """设置收集器参数"""
+        """Set collector parameters"""
         self.ssh_client = ssh_client
         self.duration = duration
         self.target_pid = target_pid
         self._generate_collect_command()
 
     def _generate_collect_command(self):
-        """生成perf收集命令"""
+        """Generate perf collection command"""
         events = ",".join(self.cfg_pmu.keys())
         target = f"-p {self.target_pid}" if self.target_pid else "-a"
         self.collect_cmd = f"perf stat -e {events} {target} sleep {self.duration}"
         logging.debug(f"Generated perf command: {self.collect_cmd}")
 
     def collect(self):
-        """收集性能数据"""
+        """Collect performance data"""
         if not self.ssh_client:
             raise RuntimeError("Host information not set")
         result = self.ssh_client.run_cmd(self.collect_cmd)
         self._parse_perf_output(result.err_msg)
 
     def _parse_perf_output(self, output: str):
-        """解析perf输出"""
+        """Parse perf output"""
         for line in output.splitlines():
             line = line.rstrip()
             if not line:
@@ -154,7 +149,7 @@ class PerfCollector(BaseCollector):
             value = parts[0].replace(',', '')
             event_name = parts[1]
 
-            # 处理未计数的事件
+            # Handle events that were not counted
             if value == "<not":
                 logging.warning(f"Event not counted: {line}")
                 self._store_event(event_name, 0)
@@ -164,7 +159,7 @@ class PerfCollector(BaseCollector):
                 self._store_event(event_name, float(value))
 
     def _store_event(self, event_name: str, value: float):
-        """存储性能事件数据"""
+        """Store performance event data"""
         if event_name in self.cfg_pmu:
             metric_name = self.cfg_pmu[event_name]
             current = self.raw_data.get(metric_name, 0.0)
@@ -172,7 +167,7 @@ class PerfCollector(BaseCollector):
 
 
 class TopDownCollector(PerfCollector):
-    """TopDown性能分析收集器"""
+    """TopDown performance analysis collector"""
 
     def __init__(
             self,
@@ -183,17 +178,17 @@ class TopDownCollector(PerfCollector):
         super().__init__("topdown", ssh_client, duration, target_pid)
 
     def process(self):
-        """处理TopDown性能数据"""
-        # 提取微架构参数
+        """Process TopDown performance data"""
+        # Extract microarchitecture parameters
         try:
             dispatch_size = self.FW_CONFIG["dispatch_size"]
 
-            # 计算各级指标
+            # Compute various level metrics
             cycle = self.raw_data["cycle"]
             inst_retired = self.raw_data["inst_retired"]
             execstall_cycle = self.raw_data["execstall_cycle"]
 
-            # L1 指标
+            # L1 metrics
             self.processed_data['frontend_bound'] = self.raw_data['fetch_bubble'] / (dispatch_size * cycle) * 100
             self.processed_data['bad_spec'] = (self.raw_data['inst_spec'] - inst_retired) / (
                     dispatch_size * cycle) * 100
@@ -204,7 +199,7 @@ class TopDownCollector(PerfCollector):
                 self.processed_data['retiring']
             ])
 
-            # L2 指标
+            # L2 metrics
             self.processed_data['frontend_latency_bound'] = self.raw_data['fetch_bubble_max'] / cycle * 100
             self.processed_data['frontend_bandwidth_bound'] = self.processed_data['frontend_bound'] - \
                                                               self.processed_data[
@@ -223,7 +218,7 @@ class TopDownCollector(PerfCollector):
             self.processed_data['mem_bound'] = (memstall_anyload + memstall_anystore) / execstall_cycle * \
                                                self.processed_data['backend_bound']
 
-            # L3 指标
+            # L3 metrics
             self.processed_data['core_fsu_bound'] = self.raw_data['fsustall'] / cycle * 100
             self.processed_data['core_other_bound'] = self.processed_data['core_bound'] - self.processed_data[
                 'core_fsu_bound']
@@ -239,7 +234,7 @@ class TopDownCollector(PerfCollector):
             self.processed_data['mem_store_bound'] = memstall_anystore / execstall_cycle * self.processed_data[
                 'backend_bound']
 
-            # 系统指标
+            # System metrics
             self.processed_data['context_switches'] = self.raw_data['context_switches']
             self.processed_data['cpu_migrations'] = self.raw_data['cpu_migrations']
             self.processed_data['page_faults'] = self.raw_data['page_faults']
@@ -248,7 +243,7 @@ class TopDownCollector(PerfCollector):
 
 
 class CacheCollector(PerfCollector):
-    """缓存性能收集器"""
+    """Cache performance collector"""
 
     def __init__(
             self,
@@ -259,11 +254,11 @@ class CacheCollector(PerfCollector):
         super().__init__("cache", ssh_client, duration, target_pid)
 
     def process(self):
-        """处理缓存性能数据"""
+        """Process cache performance data"""
         try:
             inst_retired = self.raw_data['inst_retired']
 
-            # 计算各级缓存指标
+            # Compute various cache metrics
             self.processed_data['l1i_missrate'] = self.raw_data['l1i_refill'] / self.raw_data['l1i_access'] * 100
             self.processed_data['l1d_missrate'] = self.raw_data['l1d_refill'] / self.raw_data['l1d_access'] * 100
 
@@ -280,7 +275,7 @@ class CacheCollector(PerfCollector):
 
 
 class BranchCollector(PerfCollector):
-    """分支预测性能收集器"""
+    """Branch prediction performance collector"""
 
     def __init__(
             self,
@@ -291,13 +286,13 @@ class BranchCollector(PerfCollector):
         super().__init__("branch", ssh_client, duration, target_pid)
 
     def process(self):
-        """处理分支预测性能数据"""
+        """Process branch prediction performance data"""
         try:
             cycle = self.raw_data['cycle']
             brmisspred = self.raw_data['brmisspred']
             brpred = self.raw_data['brpred']
 
-            # 分支预测相关指标
+            # Branch prediction related metrics
             self.processed_data['branch_missrate'] = brmisspred / (brmisspred + brpred) * 100
             self.processed_data['alu_isq_stall'] = self.raw_data['alu_isq_stall'] / cycle * 100
             self.processed_data['lsu_isq_stall'] = self.raw_data['lsu_isq_stall'] / cycle * 100
@@ -307,7 +302,7 @@ class BranchCollector(PerfCollector):
 
 
 class TlbCollector(PerfCollector):
-    """TLB性能收集器"""
+    """TLB performance collector"""
 
     def __init__(
             self,
@@ -318,12 +313,12 @@ class TlbCollector(PerfCollector):
         super().__init__("tlb", ssh_client, duration, target_pid)
 
     def process(self):
-        """处理TLB性能数据"""
+        """Process TLB performance data"""
         try:
             inst_retired = self.raw_data['inst_retired']
             cycle = self.raw_data['cycle']
 
-            # TLB相关指标
+            # TLB related metrics
             self.processed_data['l1i_tlb_missrate'] = self.raw_data['l1i_tlb_refill'] / self.raw_data['l1i_tlb'] * 100
             self.processed_data['l1d_tlb_missrate'] = self.raw_data['l1d_tlb_refill'] / self.raw_data['l1d_tlb'] * 100
 
@@ -348,7 +343,7 @@ class TlbCollector(PerfCollector):
 
 
 class MicroDepCollector:
-    """微架构依赖分析主控制器"""
+    """Microarchitecture dependency analysis main controller"""
 
     def __init__(
             self,
@@ -374,22 +369,22 @@ class MicroDepCollector:
         self._initialize()
 
     def _initialize(self):
-        """初始化收集器"""
-        # 获取目标进程PID
+        """Initialize collectors"""
+        # Get target process PID
         if self.target_process_name:
             self.target_pid = int(self.get_process_pid())
 
-        # 在ATTACH模式下启动基准测试
+        # Launch benchmark in ATTACH mode
         if self.mode == COLLECTMODE.ATTACH_MODE:
             if not self.benchmark_cmd:
                 raise ValueError("Benchmark command required in ATTACH mode")
             self.benchmark_pid = self.ssh_client.run_background_command(self.benchmark_cmd)
 
-        # 初始化性能收集器
+        # Initialize performance collectors
         self._initialize_collectors()
 
     def _initialize_collectors(self):
-        """创建并配置性能收集器"""
+        """Create and configure performance collectors"""
         collectors = [
             TopDownCollector(),
             TlbCollector(),
@@ -406,12 +401,12 @@ class MicroDepCollector:
             self.collector_list.append(collector)
 
     def is_target_running(self) -> bool:
-        """检查目标进程是否在运行"""
-        # 检查主目标进程
+        """Check if the target process is running"""
+        # Check main target process
         target_valid = (not self.target_pid or
                         self.is_pid_valid(self.target_pid))
 
-        # 在ATTACH模式下检查基准测试进程
+        # Check benchmark process in ATTACH mode
         benchmark_valid = (self.mode == COLLECTMODE.DIRECT_MODE or
                            (self.mode == COLLECTMODE.ATTACH_MODE and
                             self.is_pid_valid(self.benchmark_pid)))
@@ -419,7 +414,7 @@ class MicroDepCollector:
         return target_valid and benchmark_valid
 
     def run(self) -> Dict[str, float]:
-        """执行性能收集和分析"""
+        """Execute performance collection and analysis"""
         if not self.is_target_running():
             raise RuntimeError("Target process not running")
 
@@ -432,7 +427,7 @@ class MicroDepCollector:
 
             self.iter += 1
 
-        # 处理收集到的数据
+        # Process collected data
         all_data = {}
         for collector in self.collector_list:
             collector.process()
@@ -441,13 +436,13 @@ class MicroDepCollector:
         return all_data
 
     def is_pid_valid(self, pid) -> bool:
-        """检查PID是否有效"""
+        """Check if PID is valid"""
         cmd = f"ps -p {pid} > /dev/null 2>&1"
         result = self.ssh_client.run_cmd(cmd)
         return result.status_code == 0
 
     def get_process_pid(self) -> str:
-        """获取进程PID"""
+        """Get the PID of a process"""
         cmd = f"pgrep -f {self.target_process_name}"
         result = self.ssh_client.run_cmd(cmd)
         if not result.output:
@@ -455,7 +450,7 @@ class MicroDepCollector:
         return sorted(result.output.split('\n'))[0]
 
     def print_processed_data(self):
-        """打印处理后的性能数据"""
+        """Print processed performance data"""
         for collector in self.collector_list:
             for metric, value in collector.processed_data.items():
                 logging.info(f"{metric}: {value:.2f}")

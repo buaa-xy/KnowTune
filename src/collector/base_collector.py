@@ -1,5 +1,5 @@
-from pydantic import BaseModel  # 用于定义并校验输入参数模型
-from abc import abstractmethod  # 用于在基类中声明抽象方法，要求子类必须实现
+from pydantic import BaseModel  # Used to define and validate input parameter models
+from abc import abstractmethod  # Used to declare abstract methods in the base class, requiring subclasses to implement
 from typing import Dict, List, Any
 from src.utils.shell_execute import remote_execute
 
@@ -12,13 +12,13 @@ class CollectorArgs(BaseModel):
 
 class BaseCollector:
     def __init__(self, **kwargs):
-        # 使用pydantic模型的构造函数来初始化args
+        # Initialize args using the constructor of the pydantic model
         self.args = CollectorArgs(**kwargs)
 
     def get_cmd_stdout(
         self,
     ) -> Dict:
-        # 执行远程命令
+        # Execute remote commands
         result = {}
         for cmd in self.args.cmds:
             cmd_res = remote_execute(
@@ -33,6 +33,7 @@ class BaseCollector:
 
     @abstractmethod
     def parse_cmd_stdout(self, **kwargs) -> Dict:
+        # Abstract method to parse command output, must be implemented by subclasses
         pass
 
     def default_parse(
@@ -40,21 +41,23 @@ class BaseCollector:
         cmd: str,
         stdout: Any,
     ) -> Dict:
+        # Default parser returns a dictionary with the command as key and stdout as value
         return {cmd: stdout}
     
     @abstractmethod
     def data_process(self, **kwargs) -> Dict:
+        # Abstract method to process parsed data, must be implemented by subclasses
         pass
 
     def run(self) -> Dict:
-        # 1. 获取命令执行结果
+        # 1. Get the command execution results
         cmd_stdout = self.get_cmd_stdout()
 
-        # 2. 解析命令输出
+        # 2. Parse the command output
         parsed_data = self.parse_cmd_stdout(cmd_stdout)
 
-        # 3. 处理数据
+        # 3. Process the parsed data
         processed_data = self.data_process(parsed_data)
 
-        # 4. 返回处理后的数据
+        # 4. Return the processed data
         return processed_data

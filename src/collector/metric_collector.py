@@ -1,8 +1,8 @@
 import sys
 import os
-# 获取项目根目录的绝对路径
+# Get the absolute path of the project root directory
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# 将项目根目录添加到 sys.path
+# Add the project root directory to sys.path
 sys.path.append(project_root)
 from src.collector.cpu_collector import CpuCollector, get_cpu_cmd
 from src.collector.disk_collector import DiskCollector, get_disk_cmd
@@ -18,7 +18,7 @@ class MetricCollector:
             host_user=host_user,
             host_password=host_password,
         )
-        self.app = app  # 新增app属性
+        self.app = app  
         self.cpu_collector = CpuCollector(
             cmd = get_cpu_cmd(),
             host_ip=self.args.host_ip,
@@ -50,11 +50,11 @@ class MetricCollector:
 
     def run_cpu_collector(self) -> dict:
         """
-        运行所有数据收集器，收集并返回综合结果。
+        Run the CPU collector, collect and return the aggregated results.
         """
-        # 调用每个子收集器的 run 方法
+        # Call the run method of each sub-collector
         cpu_data = self.cpu_collector.run()
-        # 合并所有收集到的数据
+        # Merge all collected data
         CPU_data = {
             "Cpu": cpu_data,
         }
@@ -62,11 +62,11 @@ class MetricCollector:
 
     def run_disk_collector(self) -> dict:
         """
-        运行所有数据收集器，收集并返回综合结果。
+        Run the disk collector, collect and return the aggregated results.
         """
-        # 调用每个子收集器的 run 方法
+        # Call the run method of each sub-collector
         disk_data = self.disk_collector.run()
-        # 合并所有收集到的数据
+        # Merge all collected data
         DISK_data = {
             "Disk": disk_data,
         }
@@ -74,11 +74,11 @@ class MetricCollector:
 
     def run_memory_collector(self) -> dict:
         """
-        运行所有数据收集器，收集并返回综合结果。
+        Run the memory collector, collect and return the aggregated results.
         """
-        # 调用每个子收集器的 run 方法
+        # Call the run method of each sub-collector
         memory_data = self.memory_collector.run()
-        # 合并所有收集到的数据
+        # Merge all collected data
         MEMORY_data = {
             "Memory": memory_data,
         }
@@ -86,26 +86,12 @@ class MetricCollector:
 
     def run_network_collector(self) -> dict:
         """
-        运行所有数据收集器，收集并返回综合结果。
+        Run the network collector, collect and return the aggregated results.
         """
-        # 调用每个子收集器的 run 方法
+        # Call the run method of each sub-collector
         network_data = self.network_collector.run()
-        # 合并所有收集到的数据
+        # Merge all collected data
         NETWORK_data = {
             "Network": network_data,
         }
         return NETWORK_data
-
-
-
-if __name__ == "__main__":
-    collector = MetricCollector(
-        host_ip="121.41.164.113",
-        host_port=22,
-        host_user="root",
-        host_password="Euler123456"
-    )
-    print(collector.run_cpu_collector())
-    print(collector.run_disk_collector())
-    print(collector.run_memory_collector())
-    print(collector.run_network_collector())

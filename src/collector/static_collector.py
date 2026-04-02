@@ -1,8 +1,8 @@
 import sys
 import os
-# 获取项目根目录的绝对路径
+# Get the absolute path of the project root directory
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# 将项目根目录添加到 sys.path
+# Add the project root directory to sys.path
 sys.path.append(project_root)
 
 import subprocess
@@ -17,11 +17,11 @@ def lscpu_parser(output: str) -> dict:
             continue
         k, v = [x.strip() for x in line.split(":", 1)]
         if k == "CPU(s)":
-            metrics["CPU 逻辑核心数量"] = int(v)
+            metrics["CPU logical cores"] = int(v)
         elif k == "Core(s) per socket":
-            metrics["每个物理 CPU 插槽上的核心数"] = int(v)
+            metrics["Cores per physical CPU socket"] = int(v)
         elif k == "Socket(s)":
-            metrics["物理 CPU 插槽数量"] = int(v)
+            metrics["Physical CPU sockets"] = int(v)
         elif k == "CPU MHz":
             metrics["cpu_mhz"] = float(v)
         elif k == "L3 cache":
@@ -37,9 +37,9 @@ def lscpu_parser(output: str) -> dict:
                     bytes_val = num * 1024**3
                 else:
                     bytes_val = num
-                metrics["L3 缓存容量（字节）"] = bytes_val
+                metrics["L3 cache size (bytes)"] = bytes_val
         elif k == "NUMA node(s)":
-            metrics["NUMA 节点数量"] = int(v)
+            metrics["NUMA nodes"] = int(v)
         elif k.startswith("NUMA node") and "CPU(s)" in k:
             key_name = k.lower().replace(" ", "_")
             metrics[key_name] = v
@@ -49,40 +49,39 @@ def lscpu_parser(output: str) -> dict:
 def free_parser(output: str) -> dict:
     metrics = {}
     lines = output.splitlines()
-    #print(f"free result: {lines}")
     for line in lines:
         parts = line.split()
         if len(parts) >= 7 and parts[0] == "Mem:":
             total_bytes = int(parts[1])
             total_gb = total_bytes / (1024**3)
-            metrics["总共内存大小（GB）"] = round(total_gb, 2)
+            metrics["Total memory (GB)"] = round(total_gb, 2)
             used_bytes = int(parts[2])
             used_gb = used_bytes / (1024**3)
-            metrics["已用内存大小（GB）"] = round(used_gb, 2)
+            metrics["Used memory (GB)"] = round(used_gb, 2)
             free_bytes = int(parts[3])
             free_gb = free_bytes / (1024**3)
-            metrics["空闲内存大小（GB）"] = round(free_gb, 2)
+            metrics["Free memory (GB)"] = round(free_gb, 2)
             available_bytes = int(parts[6])
             available_gb = available_bytes / (1024**3)
-            metrics["可用内存大小（GB）"] = round(available_gb, 2)
+            metrics["Available memory (GB)"] = round(available_gb, 2)
     return metrics
 
 def page_hugepages_parser(output: str) -> dict:
     metrics = {}
     lines = output.splitlines()
     if lines:
-        metrics["系统页大小（字节）"] = int(lines[0].strip())
+        metrics["System page size (bytes)"] = int(lines[0].strip())
     field_map = {
-        "Total": "HugePages 总数",
-        "Free": "HugePages 空闲数",
-        "Rsvd": "HugePages 保留但未使用数",
-        "Surp": "HugePages 超量分配数",
+        "Total": "HugePages total",
+        "Free": "HugePages free",
+        "Rsvd": "HugePages reserved but unused",
+        "Surp": "HugePages surplus",
     }
     for line in lines[1:]:
         m = re.match(r"HugePages_(\w+):\s+(\d+)", line)
         if m:
-            key_cn = field_map.get(m.group(1), f"HugePages_{m.group(1)}")
-            metrics[key_cn] = int(m.group(2))
+            key_en = field_map.get(m.group(1), f"HugePages_{m.group(1)}")
+            metrics[key_en] = int(m.group(2))
     return metrics
 
 def lsblk_parser(output: str) -> dict:
@@ -91,8 +90,8 @@ def lsblk_parser(output: str) -> dict:
         name, rota, typ = line.split()
         if typ.lower() != "disk":
                 continue
-        t = "机械硬盘（HDD）" if rota == "1" else "固态硬盘（SSD/NVMe）"
-        metrics[f"磁盘 {name} 类型"] = t
+        t = "HDD" if rota == "1" else "SSD/NVMe"
+        metrics[f"Disk {name} type"] = t
     return metrics
 
 def iostat_parser(output: str) -> dict:
@@ -112,8 +111,8 @@ def iostat_parser(output: str) -> dict:
         data = dict(zip(hdr, cols))
         dev = cols[0]
         metrics[f"{dev}_iops"] = float(data.get("r/s", 0)) + float(data.get("w/s", 0))
-        metrics[f"{dev}_读操作吞吐率_kB_s"] = float(data.get("rkB/s", 0))
-        metrics[f"{dev}_写操作吞吐率_kB_s"] = float(data.get("wkB/s", 0))
+        metrics[f"{dev}_read_throughput_kB_s"] = float(data.get("rkB/s", 0))
+        metrics[f"{dev}_write_throughput_kB_s"] = float(data.get("wkB/s", 0))
     return metrics
 
 def queue_depth_parser(output: str) -> dict:
@@ -121,7 +120,7 @@ def queue_depth_parser(output: str) -> dict:
     for line in output.splitlines():
         path, val = line.split()
         dev = path.split("/")[3]
-        metrics[f"块设备{dev}_队列请求深度"] = int(val)
+        metrics[f"Block device {dev} queue depth"] = int(val)
     return metrics
 
 def raid_parser(output: str) -> dict:
@@ -130,7 +129,7 @@ def raid_parser(output: str) -> dict:
         if line.startswith("md") and "raid" in line:
             m = re.search(r"raid(\d+)", line)
             if m:
-                metrics[f"阵列设备 {line.split()[0]} 类型"] = f"RAID{m.group(1)}"
+                metrics[f"Array device {line.split()[0]} type"] = f"RAID{m.group(1)}"
     return metrics
 
 def df_parser(output: str) -> dict:
@@ -158,7 +157,7 @@ def ethtool_speed_parser(output: str) -> dict:
     metrics = {}
     m = re.search(r"Speed:\s*(\d+)([GM]b/s)", output)
     if m:
-        metrics["网络速度"] = m.group(1) + m.group(2)
+        metrics["Network speed"] = m.group(1) + m.group(2)
     return metrics
 
 def sriov_parser(output: str) -> dict:
@@ -171,7 +170,7 @@ def sriov_parser(output: str) -> dict:
     return metrics
 
 def fdlimit_parser(output: str) -> dict:
-    return {"最大文件描述符": int(output.strip())}
+    return {"Max file descriptors": int(output.strip())}
 
 
 def collect_system_profile(
@@ -207,52 +206,3 @@ def collect_system_profile(
             all_metrics.update(parser(output[cmd]))
         
     return all_metrics
-
-
-if __name__ == "__main__":
-    import json
-
-    # 配置远程主机信息
-    host_ip = "121.41.164.113"
-    host_port = 22
-    host_user = "root"
-    host_password = "Euler123456"
-
-    profile = collect_system_profile(
-        host_ip=host_ip,
-        host_port=host_port,
-        host_user=host_user,
-        host_password=host_password,
-    )
-    print(json.dumps(profile, ensure_ascii=False, indent=2))
-
-'''
-def collect_static_metrics() -> dict:
-    commands = [
-        ("lscpu", lscpu_parser),
-        ("free -b", free_parser),
-        ("getconf PAGE_SIZE && grep HugePages_ /proc/meminfo", page_hugepages_parser),
-        ("lsblk -dn -o NAME,ROTA,TYPE", lsblk_parser),
-        ("iostat -dx -k 1 2", iostat_parser),
-        ("for d in /sys/block/*/queue/nr_requests; do echo \"$d $(cat $d)\"; done", queue_depth_parser),
-        ("cat /proc/mdstat", raid_parser),
-        ("df -T -x tmpfs -x devtmpfs", df_parser),
-        ("ethtool $(ls /sys/class/net | grep -v lo | head -n1)", nic_queues_parser),
-        ("ethtool $(ls /sys/class/net | grep -v lo | head -n1)", ethtool_speed_parser),
-        ("lspci -vv | grep -i sriov -A5", sriov_parser),
-        ("ulimit -n", fdlimit_parser),
-    ]
-    all_metrics = {}
-    for cmd, parser in commands:
-        try:
-            output = subprocess.check_output(cmd, shell=True, text=True)
-            print(f"output: {output}")
-            all_metrics.update(parser(output))
-        except Exception:
-            continue
-    return {"static": all_metrics}
-
-if __name__ == "__main__":
-    import json
-    print(json.dumps(collect_static_metrics(), ensure_ascii=False, indent=2))
-'''

@@ -5,7 +5,7 @@ class CpuAnalyzer(BaseAnalyzer):
         super().__init__(**kwargs)
     
     def analyze(self) -> str:
-        report = "基于采集的系统指标, CPU初步的性能分析如下:\n"
+        report = "Based on the collected system metrics, the preliminary CPU performance analysis is as follows:\n"
         avg_load_report = self.avg_load_analysis()
         cpu_info_report = self.cpu_info_analysis()
         #pid_info_report = self.pid_info_analysis()
@@ -19,42 +19,42 @@ class CpuAnalyzer(BaseAnalyzer):
     def avg_load_analysis(self) -> str:
         avg_load_analysis_report = ""
 
-        # 提取cpu平均负载数据
+        # Extract CPU average load data
         one_min, five_min, ten_min = self.data.get("1min", 0.0), self.data.get("5min", 0.0), self.data.get("10min", 0.0)
 
-        # 生成平均负载数据
-        avg_load_analysis_report += f"当前系统1分钟平均负载是{one_min}, 5分钟平均负载是{five_min}, 10分钟平均负载是{ten_min}\n"
+        # Generate average load report
+        avg_load_analysis_report += f"The current system 1-minute average load is {one_min}, 5-minute average load is {five_min}, 10-minute average load is {ten_min}\n"
 
-        # 生成报告
+        # Generate report lines
         avg_load_analysis_report += (
-            self.generate_report_line(one_min > 1, "过去1分钟系统负载过重,系统可能存在cpu性能瓶颈")
+            self.generate_report_line(one_min > 1, "The system load in the past 1 minute is high, which may indicate a CPU performance bottleneck")
         )
         avg_load_analysis_report += (
-            self.generate_report_line(five_min > 1, "过去5分钟系统负载过重,系统可能存在cpu性能瓶颈")
+            self.generate_report_line(five_min > 1, "The system load in the past 5 minutes is high, which may indicate a CPU performance bottleneck")
         )
         avg_load_analysis_report += (
-            self.generate_report_line(ten_min > 1, "过去10分钟系统负载过重,系统可能存在cpu性能瓶颈")
+            self.generate_report_line(ten_min > 1, "The system load in the past 10 minutes is high, which may indicate a CPU performance bottleneck")
         )
 
-        # 检查负载是否突然增加
+        # Check for sudden load increase
         sudden_increase_message = (
-            "过去1分钟系统负载突然迅速增加，系统对cpu性能要求可能会变高"
+            "The system load in the past 1 minute has increased sharply, CPU performance demand may rise"
             if (one_min > 2 * five_min or one_min > 2 * ten_min) and one_min > 1
             else ""
         )
         avg_load_analysis_report += self.generate_report_line(sudden_increase_message, sudden_increase_message)
 
-        # 检查负载稳定性
+        # Check load stability
         stability_message = (
-            "过去10分钟内系统负载较稳定，无明显波动"
+            "System load has been relatively stable over the past 10 minutes, with no significant fluctuations"
             if abs(one_min - five_min) <= 0.2 and abs(one_min - ten_min) <= 0.2 and abs(five_min - ten_min) <= 0.2
-            else "过去10分钟内系统负载存在一定变化波动"
+            else "System load has experienced some fluctuations over the past 10 minutes"
         )
         avg_load_analysis_report += self.generate_report_line(stability_message, stability_message)
 
-        # 检查负载上升趋势
+        # Check load trend
         trend_message = (
-            "过去10分钟内系统负载呈不断上升趋势，系统对cpu性能要求可能会变高"
+            "System load has been continuously increasing over the past 10 minutes, CPU performance demand may rise"
             if one_min - five_min > 0.2 and five_min - ten_min > 0.2 and one_min > 0.5
             else ""
         )
@@ -65,79 +65,79 @@ class CpuAnalyzer(BaseAnalyzer):
     def cpu_info_analysis(self) -> str:
         cpu_info_analysis_report = ""
 
-        # 提取CPU信息数据
+        # Extract CPU information data
         usr, sys, irq, soft, util = (
-            self.data.get("用户态中的cpu利用率", 0),
-            self.data.get("kernel内核态执行时的CPU利用率", 0),
-            self.data.get("硬中断占用CPU时间的百分比", 0),
-            self.data.get("软中断占用CPU时间的百分比", 0),
-            self.data.get("CPU利用率", 0)
+            self.data.get("user_mode_cpu_utilization", 0),
+            self.data.get("kernel_cpu_utilization", 0),
+            self.data.get("hardware_interrupt_percentage", 0),
+            self.data.get("software_interrupt_percentage", 0),
+            self.data.get("overall_cpu_utilization", 0)
         )
         block_process, cpu_load, io_load = (
-            self.data.get("阻塞进程率", 0),
-            self.data.get("计算密集型", 0),
-            self.data.get("IO密集型", 0)
+            self.data.get("blocked_process_ratio", 0),
+            self.data.get("compute_intensive", 0),
+            self.data.get("io_intensive", 0)
         )
         context_switch, sys_call, cpu_num = (
-            self.data.get("系统每秒进行上下文切换的次数", 0),
-            self.data.get("系统单位时间调用次数", 0),
-            self.data.get("cpu核数", 1)  # 默认为1，避免除以0
+            self.data.get("context_switch_per_sec", 0),
+            self.data.get("system_calls_per_sec", 0),
+            self.data.get("cpu_cores", 1)  # Default to 1 to avoid division by zero
         )
 
-        # 构建基本信息报告
+        # Build basic information report
         cpu_info_analysis_report += (
-            f"当前系统中, 用户态CPU利用率: {usr*100}%, 内核态CPU利用率: {sys*100}%, "
-            f"硬中断占比: {irq*100}%, 软中断占比: {soft*100}%, CPU总体利用率: {util*100}%\n"
+            f"In the current system, user-mode CPU utilization: {usr*100}%, kernel-mode CPU utilization: {sys*100}%, "
+            f"hardware interrupt percentage: {irq*100}%, software interrupt percentage: {soft*100}%, overall CPU utilization: {util*100}%\n"
         )
 
-        # 根据条件生成其他报告行
+        # Generate other report lines based on conditions
         conditions_and_messages = [
-            (usr + sys + irq + soft > 0.9, "当前系统负载较高, 可能存在CPU瓶颈。"),
-            (cpu_load == 1, "系统用户态CPU利用率远大于内核态CPU利用率, 表明系统上的应用程序正在大量使用CPU资源, 是计算密集型负载场景。"),
-            (io_load == 1, "系统内核代码调用频率很高, 符合I/O密集型负载场景的特征。"),
-            (context_switch > cpu_num * 4000, f"系统每秒发生的上下文切换次数是{context_switch}，已超出正常阈值上限，会对系统性能产生劣化影响。"),
-            (sys_call > cpu_num * 10000, f"每秒系统调用次数是{sys_call}，表明有大量的系统调用正在发生，可能是由高负载或资源密集型应用程序引起的。"),
-            ((usr + sys) > 0.7 and sys > (0.75 * usr + 0.75 * sys), "在系统模式下的处理能力可能不足，系统可能无法有效地处理所有传入的系统调用，可能导致响应时间变长或系统性能下降。"),
-            (sys_call < 100 and util > 0.5, "系统当前有大量浮点异常(FPEs)进程。"),
+            (usr + sys + irq + soft > 0.9, "The system load is high, which may indicate a CPU bottleneck."),
+            (cpu_load == 1, "User-mode CPU utilization is much higher than kernel-mode, indicating compute-intensive workloads."),
+            (io_load == 1, "High kernel-mode system call frequency indicates I/O-intensive workload characteristics."),
+            (context_switch > cpu_num * 4000, f"Context switches per second are {context_switch}, exceeding normal threshold, which may degrade performance."),
+            (sys_call > cpu_num * 10000, f"System call rate per second is {sys_call}, indicating heavy system calls likely due to high load or resource-intensive applications."),
+            ((usr + sys) > 0.7 and sys > (0.75 * usr + 0.75 * sys), "System processing capacity in kernel mode may be insufficient, possibly causing longer response times or performance degradation."),
+            (sys_call < 100 and util > 0.5, "There are currently many processes with floating point exceptions (FPEs)."),
         ]
 
         for condition, message in conditions_and_messages:
             cpu_info_analysis_report += self.generate_report_line(condition, message)
 
-        # 添加阻塞进程报告
-        cpu_info_analysis_report += f"处于阻塞状态的进程占比是{block_process}%\n"
+        # Add blocked process report
+        cpu_info_analysis_report += f"The proportion of blocked processes is {block_process}%\n"
 
         return cpu_info_analysis_report
     
     def pid_info_analysis(self) -> str:
-        pid_info_report = "基于采集的系统指标，系统进程初步的性能分析如下：\n"
+        pid_info_report = "Based on the collected system metrics, the preliminary system process performance analysis is as follows:\n"
         pid_prompt = """
         # CONTEXT # 
-        当前有linux系统进程的数据,性能指标是在linux系统中执行 pidstat -d | head -6 获得的输出，内容如下：
+        Linux system process data is available, with performance metrics obtained from executing 'pidstat -d | head -6' in Linux, as follows:
         {pid_info}
 
         # OBJECTIVE #
-        请根据这些性能指标,生成一份逻辑清晰、条理清楚的系统进程的性能总结报告。
-        要求：
-        1.答案中只分析可能对系统性能产生影响的指标数据。
-        2.答案中不要包含任何优化建议。
-        3.答案中尽可能保留信息中真实有效的数据。
-        4.答案不超过200字。
+        Please generate a clear and logical performance summary report of the system processes based on these metrics.
+        Requirements:
+        1. Only analyze metrics that may affect system performance.
+        2. Do not include any optimization suggestions.
+        3. Retain as much accurate data as possible.
+        4. Limit response to 200 words.
 
         # STYLE #
-        你是一个专业的系统运维专家,你的回答应该逻辑严谨、表述客观、简洁易懂、条理清晰，让你的回答真实可信
+        You are a professional system operations expert. Your response should be logical, objective, concise, clear, and credible.
 
-        # Tone #
-        你应该尽可能秉承严肃、认真、严谨的态度
+        # TONE #
+        Maintain a serious, professional, and rigorous tone.
 
         # AUDIENCE #
-        你的答案将会是其他系统运维专家的重要参考意见，请尽可能提供真实有用的信息，不要胡编乱造。
+        Your answer will be used as an important reference by other system administrators, so provide accurate and useful information.
 
         # RESPONSE FORMAT #
-        如果有多条分析结论，请用数字编号分点作答。
+        If multiple conclusions exist, number them sequentially.
         
         """
-        pid_info = self.data["进程信息"]
+        pid_info = self.data["process_info"]
         pid_info_report += self.ask_llm(pid_prompt.format(pid_info=pid_info))
         return pid_info_report
     
@@ -145,32 +145,32 @@ class CpuAnalyzer(BaseAnalyzer):
         self,
         cpu_report: str
     ) -> str:
-        # TO DO
-        # 要有一个报告模板，指明包含哪些信息，以及报告格式
+        # TODO
+        # Provide a report template specifying included information and format
         report_prompt = f"""
-        以下内容是linux系统中cpu相关的性能信息:
+        The following content contains CPU-related performance information in a Linux system:
         {cpu_report}
-        信息中所涉及到的数据准确无误,真实可信。
+        The data involved is accurate and reliable.
 
         # OBJECTIVE #
-        请根据上述信息,分析系统cpu的性能状况。
-        要求：
-        1.答案中不要包含任何优化建议。
-        2.答案中尽可能保留信息中真实有效的数据。
-        3.不要遗漏任何值得分析的信息。
+        Analyze the CPU performance based on the above information.
+        Requirements:
+        1. Do not include any optimization suggestions.
+        2. Retain as much accurate data as possible.
+        3. Do not omit any relevant information.
 
         # STYLE #
-        你是一个专业的系统运维专家,你的回答应该逻辑严谨、表述客观、简洁易懂、条理清晰，让你的回答真实可信
+        You are a professional system operations expert. Your response should be logical, objective, concise, clear, and credible.
 
-        # Tone #
-        你应该尽可能秉承严肃、认真、严谨的态度
+        # TONE #
+        Maintain a serious, professional, and rigorous tone.
 
         # AUDIENCE #
-        你的答案将会是其他系统运维专家的重要参考意见，请尽可能提供真实有用的信息，不要胡编乱造。
+        Your answer will be used as an important reference by other system administrators, so provide accurate and useful information.
 
         # RESPONSE FORMAT #
-        回答以"CPU分析如下:"开头，然后另起一行逐条分析。
-        如果有多条分析结论，请用数字编号分点作答。
+        Start with "CPU analysis as follows:" on a new line, then list points sequentially.
+        Number multiple conclusions sequentially.
         
         """
         return self.ask_llm(report_prompt) + "\n"

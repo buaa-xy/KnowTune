@@ -14,6 +14,7 @@ FullDrop =  "FullDrop1=$(cat /proc/net/netstat | grep 'TcpExt:' | awk '{print$77
 
 def get_network_cmd()-> List[str]:
     return list(NETWORK_PARSE_FUNCTIONS.keys())
+
 def listenOverflows_parse(
     cmd: str,
     stdout: Any,
@@ -84,7 +85,7 @@ def sar_parse(
     if cmd != "sar -n DEV 1 1":
         logging.error("Command is not 'sar -n DEV 1 1'.")
         raise ValueError("Command is not 'sar -n DEV 1 1'.")
-    return {"网卡指标": stdout}
+    return {"network_interface_metrics": stdout}
 
 NETWORK_PARSE_FUNCTIONS = {
     ListenOverflows: listenOverflows_parse,
@@ -104,7 +105,7 @@ class NetworkCollector(BaseCollector):
     ) -> Dict:
         parse_result = {}
         for k, v in network_info_stdout.items():
-            # 使用字典获取对应的解析函数，如果cmd不在字典中，使用默认的解析函数
+            # Use the dictionary to get the corresponding parse function. If cmd is not in the dictionary, use the default parse function
             parse_function = NETWORK_PARSE_FUNCTIONS.get(k, self.default_parse)
             cmd_parse_result = parse_function(k, v)
             parse_result = {**parse_result, **cmd_parse_result}
@@ -118,10 +119,5 @@ class NetworkCollector(BaseCollector):
         network_process_result["listenOverflows"] = int(network_parse_result["listenOverflows"] > 0)
         network_process_result["fulldocookies"] = int(network_parse_result["fulldocookies"] > 0)
         network_process_result["fulldrop"] = int(network_parse_result["fulldrop"] > 0)
-        network_process_result["网卡指标"] = network_parse_result["网卡指标"]
+        network_process_result["network_interface_metrics"] = network_parse_result["network_interface_metrics"]
         return network_process_result
-
-
-
-
-    

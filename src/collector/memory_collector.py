@@ -6,13 +6,13 @@ from enum import Enum
 class MemoryMetric(Enum):
     TODO = "XX"
 
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 omm_kill_cmd = "(oom_kill1=$(cat /proc/vmstat | grep oom_kill | awk '{print$2}'); sleep 5; oom_kill2=$(cat /proc/vmstat | grep oom_kill | awk '{print$2}')) && echo $((oom_kill2 - oom_kill1))"
 
-def get_memory_cmd()-> List[str]:
+def get_memory_cmd() -> List[str]:
     return list(MEMORY_PARSE_FUNCTIONS.keys())
+
 def free_parse(
     cmd: str, 
     stdout: Any,
@@ -32,7 +32,7 @@ def free_parse(
         total_swap = float(data[1])  
         free_swap = float(data[3])  
 
-        res = {"总的交换空间总量": total_swap, "可用的交换空间总量": free_swap}
+        res = {"total_swap_space": total_swap, "available_swap_space": free_swap}
     except IndexError as e:
         logging.error(f"Failed to parse memory and swap usage: {e}")
         raise ValueError("Failed to parse memory and swap usage from stdout") from e
@@ -77,19 +77,19 @@ def sar_parse(
 
     try:
         lines = stdout.split("\n")
-        # 检查表头是否存在
+        # Check if the header exists
         if not lines:
             raise ValueError("Output is empty")
         header = lines[2].strip().split()
         has_kbavail = "kbavail" in header
         out = stdout.split("\n")
         out.pop()  
-        date = out[-1].split()
+        data = out[-1].split()
         if has_kbavail:
-            memory_usage = float(date[4]) # sar version为10.1.5时memused在3的位置
+            memory_usage = float(data[4])  # memused at index 4 in sar version 10.1.5
         else:
-            memory_usage = float(date[3]) # sar version为12.1.5时memused在4的位置
-        res = {"内存使用率": memory_usage}
+            memory_usage = float(data[3])  # memused at index 3 in sar version 12.1.5
+        res = {"memory_usage": memory_usage}
     except IndexError as e:
         logging.error(f"Failed to parse memory usage from sar output: {e}")
         raise ValueError("Failed to parse memory usage from sar output") from e
@@ -116,7 +116,7 @@ class MemoryCollector(BaseCollector):
     ) -> Dict:
         parse_result = {}
         for k, v in memory_info_stdout.items():
-            # 使用字典获取对应的解析函数，如果cmd不在字典中，使用默认的解析函数
+            # Use the dictionary to get the corresponding parse function; if cmd is not in the dict, use the default parse function
             parse_function = MEMORY_PARSE_FUNCTIONS.get(k, self.default_parse)
             cmd_parse_result = parse_function(k, v)
             parse_result = {**parse_result, **cmd_parse_result}
@@ -127,7 +127,7 @@ class MemoryCollector(BaseCollector):
         available_swap: float,
         total_swap: float
     ) -> float:
-        """计算交换空间使用率"""
+        """Calculate swap usage rate"""
         if total_swap > 0:
             return 1 - (available_swap / total_swap)
         else:
@@ -139,24 +139,16 @@ class MemoryCollector(BaseCollector):
     ) -> Dict:
         memory_process_result = {}
         
-        # 计算交换空间使用率
-        memory_process_result["交换空间使用率"] = self.calculate_swap_usage(
-            memory_parse_result["可用的交换空间总量"],
-            memory_parse_result["总的交换空间总量"]
+        # Calculate swap usage rate
+        memory_process_result["swap_usage"] = self.calculate_swap_usage(
+            memory_parse_result["available_swap_space"],
+            memory_parse_result["total_swap_space"]
         )
         
-        # 内存使用率
-        memory_process_result["内存使用率"] = memory_parse_result["内存使用率"] / 100
+        # Memory usage rate
+        memory_process_result["memory_usage"] = memory_parse_result["memory_usage"] / 100
         
-        # # Swapout 判断
-        # SWAPOUT_THRESHOLD = 5  # 定义阈值常量
-        # memory_process_result["swapout"] = int(memory_parse_result["每秒从主内存交换到交换空间的页面数"] > SWAPOUT_THRESHOLD)
-        
-        # OOM Killer 判断
+        # OOM Killer check
         memory_process_result["omm_kill"] = int(memory_parse_result["omm_kill"] > 0)
         
         return memory_process_result
-
-
-
-    
